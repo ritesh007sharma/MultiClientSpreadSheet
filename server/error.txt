@@ -1,0 +1,3 @@
+mkdir -p build 
+g++ -c -o build/SocketState.o SocketState.cpp -pthread -std=c++11 -g
+g++ -c -o build/NetController.o NetController.cpp -pthread -std=c++11 -g

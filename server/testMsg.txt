@@ -1,0 +1,1 @@
+{"type": "open","name": "cool.sprd","username": "pajensen","password": "Doofus"}

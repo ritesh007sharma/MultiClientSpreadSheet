@@ -1,0 +1,165 @@
+#include <sstream>
+
+#include "spreadsheet.h"
+
+using namespace std;
+
+Spreadsheet::Spreadsheet() {
+
+}
+
+Spreadsheet::~Spreadsheet() {
+    while (!history.empty()) {
+        Reversion *r = history.top();
+        history.pop();
+        delete r;
+    }
+}
+
+string Spreadsheet::messageHandler(string message) {
+    
+
+}
+
+/**
+ * add a cell with the supplied info
+ */
+string Spreadsheet::edit(std::string cellID, string contents, std::set<string> dependencies) {
+
+    vector<string> empty;
+    if (this->dependencies.hasCircularDependency(cellID, cellID, dependencies, empty)) {
+        return getCircularError(cellID);
+    }
+
+    if (!cells.count(cellID)) {
+        set<string> empty;
+        history.push(new Reversion(cellID, "", empty));
+        cells.insert(std::make_pair(cellID, contents));
+    }
+    else {
+        history.push(new Reversion(cellID, cells[cellID], this->dependencies.getDependees(cellID)));
+        cells[cellID] = contents;
+    }
+
+    this->dependencies.addDependencies(cellID, dependencies);
+
+    return getDelta(cellID, cells[cellID]);
+}
+
+/**
+ * undo spreadsheet
+ */
+string Spreadsheet::undo() {
+    if (history.size() > 0) {
+        Reversion* r = history.top();
+        string cell = r->id;
+        history.pop();
+        cells[r->id] = r->contents;
+        dependencies.addDependencies(r->id, r->dependees);
+
+        delete r;
+
+        return getDelta(cell, cells[cell]);
+    }
+
+    return getFullSend();
+}
+
+/**
+ * revert cell
+ */
+string Spreadsheet::revert(std::string cell) {
+    vector<Reversion*> temp;
+    Reversion * r = NULL;
+    bool circDep = false;
+
+    if (!history.empty()) {
+        r = history.top();
+        history.pop();
+        temp.push_back(r);
+    }
+
+    while (r->id != cell && !history.empty()) {
+        r = history.top();
+        history.pop();
+        temp.push_back(r);
+    }
+
+    // If you find a Reversion
+    if (r != NULL && r->id == cell) {
+
+        vector<string> empty;
+        circDep = dependencies.hasCircularDependency(cell, cell, r->dependees, empty);
+        if (!circDep) {
+            Reversion * r2 = new Reversion(cell, cells[cell], this->dependencies.getDependees(cell));
+            cells[cell] = r->contents;
+            this->dependencies.addDependencies(cell, r->dependees);
+
+            temp.pop_back();
+            delete r;
+
+            for (int i = temp.size() - 1; i >= 0; i--) {
+                history.push(temp[i]);
+            }
+
+            history.push(r2);
+            return getDelta(cell, cells[cell]);
+        }
+    }
+    //If you don't find a Reversion
+    else {
+        for (int i = temp.size() - 1; i >= 0; i--) {
+            history.push(temp[i]);
+        }
+        return getDelta(cell, "");
+    }
+
+
+    // Should only get to this point if there's a circular dependency
+    for (int i = temp.size() - 1; i >= 0; i--) {
+        history.push(temp[i]);
+    }
+    return getCircularError(cell);
+    
+}
+
+/**
+ * Get fullsend message for spreadsheet
+ */
+string Spreadsheet::getFullSend() {
+    ostringstream ss;
+    ss << "{\n  \"type\": \"full send\",\n  \"spreadsheet\": {\n";
+
+    std::map<string, string>::iterator it = cells.begin();
+
+    while (it != cells.end()) {
+        ss << "    \"" << it->first << "\" : \"" << it->second << "\"";
+
+        it++;
+
+        if (it != cells.end()) {
+            ss << ",";
+        }
+        ss << "\n";
+    }
+
+    ss << "  }\n}";
+
+    return ss.str();
+}
+
+string Spreadsheet::getDelta(string cell, string contents) {
+    return "{\n  \"type\": \"full send\",\n  \"spreadsheet\": {\n    \"" + cell + "\" : \"" + contents + "\"\n  }\n}";
+}
+
+string Spreadsheet::getCircularError(string cell) {
+    return "{\n  \"type\": \"error\",\n  \"code\": 2,\n  \"source\": \"" + cell + "\"\n}";
+}
+
+void Spreadsheet::loadSpreadsheet(string data) {
+
+}
+
+string Spreadsheet::getSpreadsheet() {
+    return "";
+}

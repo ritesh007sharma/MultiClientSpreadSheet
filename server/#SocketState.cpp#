@@ -1,0 +1,12 @@
+
+#include "SocketState.h"
+
+using namespace std;
+
+SocketState::SocketState(int id){
+
+}
+
+string SocketState::getMessage(){
+        return "";
+}
