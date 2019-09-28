@@ -2,7 +2,7 @@
 
 ## Server
 1. Clone repository into local directory
-2. Navigate into "PJsPJs/server" directory using command line
+2. Navigate into "MultiClientSpreadSheet/server" directory using command line
 3. Run "make" command
 4. Run "./build/Server" command to start the server
 
